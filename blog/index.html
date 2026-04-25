@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Writing — Dileep Gopalakrishnan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #0a0e14;
+    --rule: #1b232d;
+    --fg: #c9d1d9;
+    --dim: #6b7684;
+    --muted: #3d4651;
+    --accent: #22d3ee;
+    --orange: #d4a574;
+    --green: #7ec699;
+    --purple: #c586c0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: 15px; line-height: 1.7; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 48px 32px 96px; }
+  .nav { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--dim); letterspacing: 0.12em; padding-bottom: 18px; border-bottom: 1px solid var(--rule); text-transform: uppercase; letter-spacing: 0.12em; }
+  .nav a { color: var(--dim); margin-left: 22px; }
+  .nav a.active { color: var(--accent); }
+  h1.page { font-size: 52px; font-weight: 500; letter-spacing: -0.03em; line-height: 1.05; margin: 52px 0 14px; }
+  .lede { color: var(--dim); font-size: 16px; max-width: 620px; margin: 0; }
+  .tags { display: flex; gap: 8px; margin: 36px 0 18px; flex-wrap: wrap; }
+  .tag { font-size: 12px; padding: 4px 10px; border: 1px solid var(--rule); border-radius: 3px; color: var(--dim); cursor: pointer; }
+  .tag.active { color: var(--accent); border-color: var(--accent); }
+  .postlist { margin-top: 24px; border-top: 1px solid var(--rule); }
+  .post { display: grid; grid-template-columns: 120px 1fr auto; gap: 20px; align-items: baseline; padding: 20px 0; border-bottom: 1px solid var(--rule); color: var(--fg); }
+  .post:hover { background: #10161f; }
+  .post .d { color: var(--muted); font-size: 12px; }
+  .post .t { font-size: 17px; font-weight: 500; }
+  .post .t .sub { display: block; color: var(--dim); font-weight: 400; font-size: 13px; margin-top: 3px; }
+  .post .r { color: var(--dim); font-size: 12px; text-align: right; white-space: nowrap; }
+  .post .r .tagpill { display: inline-block; padding: 2px 8px; border: 1px solid var(--rule); border-radius: 3px; color: var(--accent); margin-right: 6px; }
+  .footer { margin-top: 72px; display: flex; justify-content: space-between; color: var(--dim); font-size: 12px; border-top: 1px solid var(--rule); padding-top: 18px; }
+  .prompt { color: var(--green); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="nav">
+    <div><span class="prompt">~/</span>dileep.g<span style="color:var(--accent)">_</span></div>
+    <div>
+      <a href="../index.html">index</a>
+      <a href="index.html" class="active">writing</a>
+      <a href="mailto:dileephpg6@outlook.com">contact</a>
+    </div>
+  </div>
+
+  <h1 class="page">Writing on ERP, <span style="color:var(--accent);font-style:italic">D365</span> &amp; the craft.</h1>
+  <p class="lede"><span class="prompt">$</span> Notes, patterns and field reports from 10+ years inside Microsoft Dynamics 365 Finance &amp; Operations and AX 2012 R3. Mostly technical, occasionally opinionated.</p>
+
+  <div class="tags">
+    <span class="tag active">all</span>
+    <span class="tag">D365 F&amp;O</span>
+    <span class="tag">AX 2012 R3</span>
+    <span class="tag">Architecture</span>
+    <span class="tag">Migration</span>
+    <span class="tag">X++</span>
+  </div>
+
+    <div class="postlist">
+      <div style="padding: 0 0 14px; text-align: right;">
+        <a href="../new-post.html" style="font-size:12px; color:var(--dim); border:1px solid var(--rule); padding:6px 12px; border-radius:3px;">+ new post</a>
+      </div>
+      <a class="post" href="reference-fields.html">
+      <span class="d">2026-04-18</span>
+      <span class="t">Adding reference fields to forms without a data source<span class="sub">A recipe for the cases where the designer won't let you, but production demands it.</span></span>
+      <span class="r"><span class="tagpill">D365 F&amp;O</span>7 min</span>
+    </a>
+    <a class="post" href="#">
+      <span class="d">2026-01-14</span>
+      <span class="t">Migrating AX 2012 R3 customisations to D365 cleanly<span class="sub">The boring, careful, unglamorous playbook that actually ships.</span></span>
+      <span class="r"><span class="tagpill">Migration</span>14 min</span>
+    </a>
+    <a class="post" href="#">
+      <span class="d">2025-11-22</span>
+      <span class="t">Data entities vs. custom services: a decision tree<span class="sub">When to reach for what, with real-world failure modes.</span></span>
+      <span class="r"><span class="tagpill">D365 F&amp;O</span>9 min</span>
+    </a>
+    <a class="post" href="#">
+      <span class="d">2025-09-30</span>
+      <span class="t">Security roles without tears<span class="sub">A repeatable process for modelling duties, privileges and role assignments.</span></span>
+      <span class="r"><span class="tagpill">Security</span>12 min</span>
+    </a>
+  </div>
+
+  <div class="footer">
+    <span>© 2026 Dileep Gopalakrishnan</span>
+    <span>dileephpg6@outlook.com · /in/dileep-gopalakrishnan-43a44a7a</span>
+  </div>
+</div>
+</body>
+</html>

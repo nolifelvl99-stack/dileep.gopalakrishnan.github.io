@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Adding reference fields to forms without a data source — Dileep Gopalakrishnan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="article.css"/>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="wrap">
+  <div class="nav">
+    <div><span class="prompt">~/</span>dileep.g<span style="color:var(--accent)">_</span></div>
+    <div>
+      <a href="../index.html">index</a>
+      <a href="index.html" class="active">writing</a>
+      <a href="mailto:dileephpg6@outlook.com">contact</a>
+    </div>
+  </div>
+
+  <div class="meta">
+    <span class="tag">D365 F&amp;O</span>
+    <span>2026 · 04 · 18</span>
+    <span>7 min read</span>
+  </div>
+  <h1 class="title">Adding reference fields to forms without a data source.</h1>
+  <p class="deck">Every D365 F&amp;O consultant hits this eventually: a form where someone needs a lookup that isn't backed by a data source, and the form designer flatly refuses. Here's the cleanest pattern I've landed on after a decade of running into it.</p>
+
+  <div class="toc">
+    <div class="toctitle">Contents</div>
+    <ol>
+      <li><a href="#why">Why the form won't let you</a></li>
+      <li><a href="#pattern">The pattern, in one picture</a></li>
+      <li><a href="#code">The code</a></li>
+      <li><a href="#gotchas">Gotchas in production</a></li>
+      <li><a href="#wrap">Wrap-up</a></li>
+    </ol>
+  </div>
+
+  <h2 id="why"><span class="hash">#</span>Why the form won't let you</h2>
+  <p>
+    Reference groups — the lovely control that gives you a name-plus-description lookup for free — need a data source field of type <code class="inline">EDT</code> backed by a surrogate foreign key relation. If the field isn't on a data source (think: an unbound parameter dialog, a SysOperation contract, or a custom tmp form you've stitched together in X++), the designer will refuse to let you drop the control.
+  </p>
+  <p>
+    The instinct is to add a data source just to satisfy the designer. Don't. You end up fighting cursor behaviour, validation, and inserts for something that was never meant to persist.
+  </p>
+
+  <div class="callout note">
+    <span class="icon">i</span>
+    <span>If the field <em>will</em> eventually persist — e.g. you're capturing it to run a later operation — a proper data source is still the right answer. This post is for the transient, dialog-only case.</span>
+  </div>
+
+  <h2 id="pattern"><span class="hash">#</span>The pattern, in one picture</h2>
+  <p>
+    Build the reference group manually out of two plain controls — a <code class="inline">StringEdit</code> for the key and a <code class="inline">StringEdit</code> for the description — then override <code class="inline">lookup()</code> and <code class="inline">validate()</code> on the first control. That's it. The designer never has to know.
+  </p>
+
+  <pre><span class="lang">X++</span><code><span class="c">// Dialog class — SysOperation contract / RunBase descendant</span>
+<span class="k">public class</span> <span class="t">MyParmDialog</span> <span class="k">extends</span> <span class="t">RunBaseBatch</span>
+{
+    <span class="t">CustAccount</span> custAccount;
+    <span class="t">DialogField</span>  dialogCustAccount;
+
+    <span class="k">public</span> <span class="t">Object</span> <span class="f">dialog</span>()
+    {
+        <span class="t">DialogRunbase</span> dlg = <span class="k">super</span>();
+
+        dialogCustAccount = dlg.<span class="f">addFieldValue</span>(
+            <span class="f">extendedTypeStr</span>(<span class="t">CustAccount</span>),
+            custAccount,
+            <span class="s">"Customer"</span>,
+            <span class="s">"Pick a customer — lookup is wired below."</span>);
+
+        <span class="k">return</span> dlg;
+    }
+}
+</code></pre>
+
+  <p>
+    Then, in the form wrapping that dialog (or with a <code class="inline">FormBuildControl</code> programmatically), attach a <code class="inline">lookup</code> handler:
+  </p>
+
+  <pre><span class="lang">X++</span><code><span class="k">public void</span> <span class="f">lookup</span>(<span class="t">FormStringControl</span> _control)
+{
+    <span class="t">Query</span>                   q = <span class="k">new</span> <span class="t">Query</span>();
+    <span class="t">QueryBuildDataSource</span>   qbds;
+    <span class="t">SysTableLookup</span>         lookup;
+
+    qbds = q.<span class="f">addDataSource</span>(<span class="f">tableNum</span>(<span class="t">CustTable</span>));
+    qbds.<span class="f">addSortField</span>(<span class="f">fieldNum</span>(<span class="t">CustTable</span>, AccountNum));
+
+    lookup = <span class="t">SysTableLookup</span>::<span class="f">newParameters</span>(<span class="f">tableNum</span>(<span class="t">CustTable</span>), _control);
+    lookup.<span class="f">addLookupField</span>(<span class="f">fieldNum</span>(<span class="t">CustTable</span>, AccountNum));
+    lookup.<span class="f">addLookupField</span>(<span class="f">fieldNum</span>(<span class="t">CustTable</span>, Name));
+    lookup.<span class="f">parmQuery</span>(q);
+    lookup.<span class="f">performFormLookup</span>();
+}
+</code></pre>
+
+  <h2 id="code"><span class="hash">#</span>The code</h2>
+  <p>
+    The full example — dialog contract, lookup override, and the description-fill in <code class="inline">modified()</code> — lives in a gist linked at the bottom. The two things that are easy to get wrong:
+  </p>
+  <ul>
+    <li>Use <code class="inline">SysTableLookup::newParameters</code>, not the older <code class="inline">SysTableLookup::new</code>. The former wires the selected-value callback for you.</li>
+    <li>If you need the "description" half to update live, override <code class="inline">modified()</code> on the key control and <code class="inline">fillLookup()</code>-style read the related record yourself.</li>
+  </ul>
+
+  <blockquote>
+    <p>Reference groups are a <em>convenience</em>. They're not a law of nature. The day the convenience stops fitting your case, drop down a level and build the two controls yourself — you already know how.</p>
+  </blockquote>
+
+  <h2 id="gotchas"><span class="hash">#</span>Gotchas in production</h2>
+  <ol>
+    <li><strong>Security.</strong> Manual lookups bypass the datasource's query security. If your lookup hits a sensitive table, wrap it with the same <code class="inline">QueryBuildRange</code>s the data source would have applied.</li>
+    <li><strong>Validation.</strong> Without a data source, the framework won't call your <code class="inline">validateWrite</code>. Do the existence check explicitly in the control's <code class="inline">validate()</code> method.</li>
+    <li><strong>Label leaks.</strong> Labels on bare <code class="inline">StringEdit</code>s default to the EDT label — which is fine — but if you've extended the EDT, the change may not propagate. Pin the label on the control directly.</li>
+  </ol>
+
+  <div class="callout warn">
+    <span class="icon">!</span>
+    <span>Never cache the selected record in a form-level static. I've watched one of those outlive three users across a Terminal Services session and poison a batch. Use <code class="inline">parmMap</code> or a per-instance field.</span>
+  </div>
+
+  <h2 id="wrap"><span class="hash">#</span>Wrap-up</h2>
+  <p>
+    You don't need a data source to get a reference-group-shaped experience. Two string controls, a <code class="inline">SysTableLookup</code>, and a careful <code class="inline">modified()</code> are enough — and they keep the dialog honest about the fact that nothing here persists until the operation runs.
+  </p>
+  <p>
+    Next post I'll cover the flip side: when you <em>do</em> have a data source, but the relation is polymorphic and the designer still throws its hands up.
+  </p>
+
+  <hr/>
+
+  <div class="author">
+    <div class="avatar">DG</div>
+    <div>
+      <div class="n">Dileep Gopalakrishnan</div>
+      <div class="b">10+ years in Microsoft Dynamics 365 F&amp;O and AX 2012 R3. ISV add-on developer. Open for freelance &amp; consulting — <a href="mailto:dileephpg6@outlook.com">dileephpg6@outlook.com</a></div>
+    </div>
+  </div>
+
+  <div class="prevnext">
+    <a href="index.html"><div class="lbl">← all posts</div><div class="ttl">Back to writing</div></a>
+    <a href="index.html"><div class="lbl">next →</div><div class="ttl">ISV add-on packaging: lessons from 10 releases</div></a>
+  </div>
+
+  <div class="footer">
+    <span>© 2026 Dileep Gopalakrishnan</span>
+    <span>dileephpg6@outlook.com · /in/dileep-gopalakrishnan-43a44a7a</span>
+  </div>
+</div>
+
+<script>
+  // reading progress bar
+  const bar = document.getElementById('progress');
+  function update() {
+    const h = document.documentElement;
+    const pct = (h.scrollTop) / (h.scrollHeight - h.clientHeight) * 100;
+    bar.style.width = Math.min(100, Math.max(0, pct)) + '%';
+  }
+  document.addEventListener('scroll', update, { passive: true });
+  update();
+</script>
+</body>
+</html>
