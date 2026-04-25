@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>This is a test — Dileep Gopalakrishnan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="article.css"/>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="wrap">
+  <div class="nav">
+    <div><span class="prompt">~/</span>dileep.g<span style="color:var(--accent)">_</span></div>
+    <div>
+      <a href="../index.html">index</a>
+      <a href="index.html" class="active">writing</a>
+      <a href="mailto:dileephpg6@outlook.com">contact</a>
+    </div>
+  </div>
+
+  <div class="meta">
+    <span class="tag">D365 F&amp;O</span>
+    <span>2026-04-25</span>
+    <span>1 min read</span>
+  </div>
+  <h1 class="title">This is a test</h1>
+  <p class="deck">This is a test</p>
+
+
+  <p>This is a test</p>
+
+  <hr/>
+
+  <div class="author">
+    <div class="avatar">DG</div>
+    <div>
+      <div class="n">Dileep Gopalakrishnan</div>
+      <div class="b">10+ years in Microsoft Dynamics 365 F&amp;O and AX 2012 R3. ISV add-on developer. Open for freelance &amp; consulting — <a href="mailto:dileephpg6@outlook.com">dileephpg6@outlook.com</a></div>
+    </div>
+  </div>
+
+  <div class="prevnext">
+    <a href="index.html"><div class="lbl">← all posts</div><div class="ttl">Back to writing</div></a>
+    <a href="index.html"><div class="lbl">next →</div><div class="ttl">More posts</div></a>
+  </div>
+
+  <div class="footer">
+    <span>© 2026 Dileep Gopalakrishnan</span>
+    <span>dileephpg6@outlook.com · /in/dileep-gopalakrishnan-43a44a7a</span>
+  </div>
+</div>
+<script>
+  const bar = document.getElementById('progress');
+  function update() {
+    const h = document.documentElement;
+    const pct = (h.scrollTop) / (h.scrollHeight - h.clientHeight) * 100;
+    bar.style.width = Math.min(100, Math.max(0, pct)) + '%';
+  }
+  document.addEventListener('scroll', update, { passive: true });
+  update();
+</script>
+</body>
+</html>
