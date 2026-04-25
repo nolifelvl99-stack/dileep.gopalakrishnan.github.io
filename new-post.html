@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>new-post.html — Dileep's post generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #0a0e14; --rule: #1b232d; --rule-2: #2a3441;
+    --fg: #c9d1d9; --dim: #6b7684; --muted: #3d4651;
+    --accent: #22d3ee; --orange: #d4a574; --green: #7ec699; --purple: #c586c0; --red: #e06c75;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+    font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: 14px; height: 100%; }
+  a { color: var(--accent); text-decoration: none; }
+
+  .titlebar { height: 32px; background: #05080c; border-bottom: 1px solid var(--rule); display: flex; align-items: center; gap: 12px; padding: 0 14px; font-size: 12px; color: var(--dim); }
+  .titlebar .dots { display: flex; gap: 6px; }
+  .titlebar .dot { width: 12px; height: 12px; border-radius: 6px; }
+  .titlebar .dot.r { background: #ff5f57; } .titlebar .dot.y { background: #febc2e; } .titlebar .dot.g { background: #28c840; }
+
+  .shell { display: grid; grid-template-rows: 32px 1fr; height: 100vh; }
+  .split { display: grid; grid-template-columns: 1fr 1fr; min-height: 0; }
+  @media (max-width: 1000px) { .split { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; } }
+
+  .pane { overflow-y: auto; min-height: 0; }
+  .pane.left { border-right: 1px solid var(--rule); background: var(--panel); }
+  .pane.right { background: var(--bg); }
+
+  .hdr { position: sticky; top: 0; z-index: 2; background: var(--panel); border-bottom: 1px solid var(--rule); padding: 14px 22px; display: flex; align-items: center; gap: 10px; }
+  .pane.right .hdr { background: var(--bg); }
+  .hdr .kicker { font-size: 11px; color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase; }
+  .hdr h2 { font-size: 16px; margin: 0; font-weight: 500; }
+  .hdr .spacer { flex: 1; }
+
+  form { padding: 20px 22px 40px; display: grid; gap: 16px; }
+  label { display: grid; gap: 6px; font-size: 12px; color: var(--dim); letter-spacing: 0.06em; text-transform: uppercase; }
+  input, textarea, select {
+    background: #05080c; border: 1px solid var(--rule); color: var(--fg);
+    font-family: inherit; font-size: 14px; padding: 10px 12px; border-radius: 4px;
+    line-height: 1.6; width: 100%;
+  }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 140px; }
+  textarea.body { min-height: 420px; font-size: 13.5px; line-height: 1.7; }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  @media (max-width: 640px) { .row { grid-template-columns: 1fr; } }
+
+  .hint { font-size: 11px; color: var(--muted); text-transform: none; letter-spacing: 0; margin-top: -2px; }
+  .hint code { background: #1a2230; padding: 1px 5px; border-radius: 3px; color: var(--orange); }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 22px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); background: var(--panel); position: sticky; top: 51px; z-index: 1; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid var(--rule); background: transparent; color: var(--fg); font-family: inherit; font-size: 12px; cursor: pointer; border-radius: 3px; }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.primary { border-color: var(--accent); color: var(--accent); }
+  .btn.primary:hover { background: var(--accent); color: #05080c; }
+  .btn.ghost { color: var(--dim); }
+
+  /* preview pane styling copied from article template */
+  .preview { padding: 24px 32px 60px; max-width: 760px; margin: 0 auto; }
+  .preview .meta { margin: 12px 0 12px; font-size: 12px; color: var(--dim); letter-spacing: 0.1em; text-transform: uppercase; display: flex; gap: 18px; align-items: center; }
+  .preview .meta .tag { color: var(--accent); border: 1px solid var(--rule); padding: 3px 10px; border-radius: 3px; letter-spacing: 0.06em; }
+  .preview h1.title { font-size: 40px; font-weight: 500; line-height: 1.08; letter-spacing: -0.025em; margin: 0 0 14px; }
+  .preview .deck { color: var(--dim); font-size: 16px; line-height: 1.6; margin: 0 0 32px; border-bottom: 1px solid var(--rule); padding-bottom: 22px; }
+  .preview h2 { font-size: 22px; font-weight: 500; margin: 40px 0 12px; letter-spacing: -0.01em; }
+  .preview h2 .hash { color: var(--muted); margin-right: 10px; }
+  .preview h3 { font-size: 17px; font-weight: 500; margin: 28px 0 8px; }
+  .preview p { margin: 0 0 16px; line-height: 1.75; }
+  .preview ul, .preview ol { margin: 0 0 20px; padding-left: 22px; }
+  .preview code.inline { background: #1a2230; border: 1px solid var(--rule); padding: 1px 7px; border-radius: 3px; font-size: 13px; color: var(--orange); }
+  .preview pre { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 16px 18px; margin: 6px 0 24px; overflow-x: auto; font-size: 13px; line-height: 1.6; position: relative; }
+  .preview pre .lang { position: absolute; top: 6px; right: 12px; color: var(--muted); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; }
+  .preview blockquote { margin: 20px 0; padding: 12px 20px; border-left: 2px solid var(--accent); background: #0f1720; color: var(--dim); font-style: italic; }
+  .preview .callout { display: grid; grid-template-columns: 24px 1fr; gap: 12px; padding: 14px 18px; border: 1px solid var(--rule); border-radius: 6px; margin: 20px 0; background: #0f1720; font-size: 14px; }
+  .preview .callout.note { border-left: 3px solid var(--accent); }
+  .preview .callout.warn { border-left: 3px solid var(--orange); }
+  .preview .callout .icon { color: var(--accent); font-weight: 600; }
+  .preview .callout.warn .icon { color: var(--orange); }
+
+  /* syntax colors in preview */
+  .k { color: var(--purple); } .s { color: var(--orange); } .n { color: var(--green); }
+  .c { color: var(--muted); font-style: italic; } .t { color: var(--accent); } .f { color: #dcdcaa; }
+
+  /* output modal */
+  .output { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 10; padding: 40px; }
+  .output.open { display: flex; align-items: center; justify-content: center; }
+  .output .card { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; max-width: 900px; width: 100%; max-height: 100%; display: flex; flex-direction: column; }
+  .output .card .ohdr { padding: 16px 22px; border-bottom: 1px solid var(--rule); display: flex; align-items: center; gap: 10px; }
+  .output .card .ohdr .grow { flex: 1; }
+  .output .card pre { margin: 0; padding: 20px 22px; overflow: auto; flex: 1; font-size: 12px; line-height: 1.55; color: var(--fg); background: #05080c; white-space: pre; border-radius: 0 0 8px 8px; }
+  .output .card pre .lang { display: none; }
+
+  /* cheatsheet */
+  details.sheet { border: 1px solid var(--rule); border-radius: 4px; padding: 10px 14px; background: #05080c; font-size: 12px; color: var(--dim); }
+  details.sheet summary { cursor: pointer; color: var(--fg); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
+  details.sheet code { background: #1a2230; padding: 1px 6px; border-radius: 3px; color: var(--orange); }
+  details.sheet .line { margin: 8px 0 0; font-family: inherit; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="titlebar">
+    <div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
+    <span>new-post.html — local post generator</span>
+    <span style="flex:1"></span>
+    <a href="index.html" style="color:var(--muted)">← back to portfolio</a>
+  </div>
+
+  <div class="split">
+    <!-- LEFT: form -->
+    <div class="pane left">
+      <div class="hdr">
+        <span class="kicker">$ compose</span>
+        <h2>Post details</h2>
+        <div class="spacer"></div>
+        <button class="btn ghost" id="btn-load-sample">load sample</button>
+        <button class="btn ghost" id="btn-clear">clear</button>
+      </div>
+
+      <div class="toolbar">
+        <button class="btn primary" id="btn-generate">↓ generate .html</button>
+        <button class="btn" id="btn-copy-md">copy index.html row</button>
+        <button class="btn" id="btn-copy-js">copy POSTS entry</button>
+      </div>
+
+      <form id="form" autocomplete="off" onsubmit="return false">
+        <label>Slug (filename will be <code style="color:var(--orange)">blog/&lt;slug&gt;.html</code>)
+          <input id="f-slug" placeholder="e.g. reference-fields" />
+          <span class="hint">lowercase, dashes, no spaces. auto-generated from the title if blank.</span>
+        </label>
+
+        <label>Title
+          <input id="f-title" placeholder="Adding reference fields to forms without a data source" />
+        </label>
+
+        <div class="row">
+          <label>Tag
+            <select id="f-tag">
+              <option>D365 F&amp;O</option>
+              <option>AX 2012 R3</option>
+              <option>Architecture</option>
+              <option>Migration</option>
+              <option>Security</option>
+              <option>X++</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <label>Date (YYYY-MM-DD)
+            <input id="f-date" type="date" />
+          </label>
+          <label>Read time
+            <input id="f-read" placeholder="7 min" />
+            <span class="hint">auto-estimated from body length if left blank.</span>
+          </label>
+        </div>
+
+        <label>Deck / lede (1-2 sentences under the title)
+          <textarea id="f-deck" rows="3" placeholder="A recipe for the cases where the designer won't let you, but production demands it."></textarea>
+        </label>
+
+        <label>Body (Markdown-lite — see cheatsheet)
+          <textarea id="f-body" class="body" placeholder="## Why it matters&#10;&#10;Start writing..."></textarea>
+        </label>
+
+        <details class="sheet">
+          <summary>Markdown-lite cheatsheet (click to expand)</summary>
+          <div class="line">
+<strong style="color:var(--fg)">Headings</strong>
+  <code>## Section</code>  → h2 with # gutter
+  <code>### Sub-section</code>
+
+<strong style="color:var(--fg)">Inline</strong>
+  <code>**bold**</code>  <code>*italic*</code>  <code>`code`</code>  <code>[text](url)</code>
+
+<strong style="color:var(--fg)">Lists</strong>
+  <code>- item</code>  (unordered)
+  <code>1. item</code> (ordered)
+
+<strong style="color:var(--fg)">Code block</strong>  (X++, ts, js, etc)
+  <code>```X++</code>
+  <code>public class Foo { }</code>
+  <code>```</code>
+
+<strong style="color:var(--fg)">Callouts</strong>
+  <code>:::note Helpful aside text.</code>
+  <code>:::warn Watch out here.</code>
+
+<strong style="color:var(--fg)">Quote</strong>
+  <code>&gt; Pull-quote goes here.</code>
+
+<strong style="color:var(--fg)">Horizontal rule</strong>
+  <code>---</code>
+          </div>
+        </details>
+
+        <label>Next post link (optional)
+          <input id="f-next-title" placeholder="Title of the next post" />
+          <input id="f-next-href" placeholder="index.html  or  slug-of-next.html" style="margin-top: 6px;" />
+        </label>
+      </form>
+    </div>
+
+    <!-- RIGHT: live preview -->
+    <div class="pane right">
+      <div class="hdr">
+        <span class="kicker">live preview</span>
+        <h2 id="pv-filename">blog/new-post.html</h2>
+      </div>
+      <div class="preview" id="preview"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Output modal -->
+<div class="output" id="output">
+  <div class="card">
+    <div class="ohdr">
+      <span style="color:var(--accent)">✓</span>
+      <strong id="out-filename">blog/new-post.html</strong>
+      <span class="grow"></span>
+      <button class="btn" id="btn-download">↓ download</button>
+      <button class="btn" id="btn-copy-html">copy</button>
+      <button class="btn ghost" id="btn-close">close</button>
+    </div>
+    <pre id="out-code"></pre>
+  </div>
+</div>
+
+<script>
+/* ───────────────────────── helpers ───────────────────────── */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+function slugify(s) {
+  return String(s || '').toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+}
+
+function formatDateDisplay(iso) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-').map(Number);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[m-1]} ${String(d).padStart(2,'0')}, ${y}`;
+}
+
+function estimateRead(body) {
+  const words = (body || '').trim().split(/\s+/).length;
+  const mins = Math.max(1, Math.round(words / 200));
+  return `${mins} min`;
+}
+
+/* ───── inline markdown: **bold**, *italic*, `code`, [text](url) ───── */
+function inlineMd(s) {
+  let out = esc(s);
+  out = out.replace(/`([^`]+)`/g, (_, code) => `<code class="inline">${code}</code>`);
+  out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, url) => `<a href="${url}">${text}</a>`);
+  out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  out = out.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+  return out;
+}
+
+/* ───── block-level markdown-lite → HTML ───── */
+function renderBody(md) {
+  const lines = (md || '').replace(/\r\n/g, '\n').split('\n');
+  const out = [];
+  let i = 0;
+  const headings = [];   // { level, text, id }
+
+  const slugHeading = (t) => slugify(t).slice(0, 40) || 'section';
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // fenced code
+    if (/^```/.test(line)) {
+      const lang = line.slice(3).trim() || '';
+      const code = [];
+      i++;
+      while (i < lines.length && !/^```/.test(lines[i])) { code.push(lines[i]); i++; }
+      i++; // closing ```
+      out.push(`<pre>${lang ? `<span class="lang">${esc(lang)}</span>` : ''}<code>${highlight(code.join('\n'), lang)}</code></pre>`);
+      continue;
+    }
+
+    // callouts
+    const co = line.match(/^:::(note|warn|tip)\s*(.*)$/);
+    if (co) {
+      const kind = co[1] === 'warn' ? 'warn' : 'note';
+      const icon = kind === 'warn' ? '!' : 'i';
+      const body = [co[2]];
+      i++;
+      while (i < lines.length && !/^:::\s*$/.test(lines[i]) && lines[i].trim() !== '' && !/^:::/.test(lines[i])) {
+        body.push(lines[i]); i++;
+      }
+      if (i < lines.length && /^:::\s*$/.test(lines[i])) i++;
+      out.push(`<div class="callout ${kind}"><span class="icon">${icon}</span><span>${inlineMd(body.join(' ').trim())}</span></div>`);
+      continue;
+    }
+
+    // headings
+    const h2 = line.match(/^##\s+(.+)$/);
+    if (h2) {
+      const id = slugHeading(h2[1]);
+      headings.push({ level: 2, text: h2[1], id });
+      out.push(`<h2 id="${id}"><span class="hash">#</span>${inlineMd(h2[1])}</h2>`);
+      i++; continue;
+    }
+    const h3 = line.match(/^###\s+(.+)$/);
+    if (h3) {
+      out.push(`<h3>${inlineMd(h3[1])}</h3>`);
+      i++; continue;
+    }
+
+    // hr
+    if (/^---+\s*$/.test(line)) { out.push('<hr/>'); i++; continue; }
+
+    // blockquote
+    if (/^>\s?/.test(line)) {
+      const buf = [];
+      while (i < lines.length && /^>\s?/.test(lines[i])) { buf.push(lines[i].replace(/^>\s?/, '')); i++; }
+      out.push(`<blockquote><p>${inlineMd(buf.join(' '))}</p></blockquote>`);
+      continue;
+    }
+
+    // unordered list
+    if (/^-\s+/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^-\s+/.test(lines[i])) { items.push(lines[i].replace(/^-\s+/, '')); i++; }
+      out.push(`<ul>${items.map(x => `<li>${inlineMd(x)}</li>`).join('')}</ul>`);
+      continue;
+    }
+
+    // ordered list
+    if (/^\d+\.\s+/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^\d+\.\s+/.test(lines[i])) { items.push(lines[i].replace(/^\d+\.\s+/, '')); i++; }
+      out.push(`<ol>${items.map(x => `<li>${inlineMd(x)}</li>`).join('')}</ol>`);
+      continue;
+    }
+
+    // blank
+    if (line.trim() === '') { i++; continue; }
+
+    // paragraph — coalesce until blank line / block element
+    const buf = [line];
+    i++;
+    while (i < lines.length && lines[i].trim() !== '' &&
+           !/^(```|##\s|###\s|:::|---+\s*$|>\s?|-\s+|\d+\.\s+)/.test(lines[i])) {
+      buf.push(lines[i]); i++;
+    }
+    out.push(`<p>${inlineMd(buf.join(' '))}</p>`);
+  }
+
+  // TOC from h2s
+  const toc = headings.length
+    ? `<div class="toc"><div class="toctitle">Contents</div><ol>${
+        headings.map(h => `<li><a href="#${h.id}">${esc(h.text)}</a></li>`).join('')
+      }</ol></div>`
+    : '';
+  return { body: out.join('\n'), toc };
+}
+
+/* ───── ultra-light syntax highlighter (X++ / ts / js) ───── */
+function highlight(code, lang) {
+  const l = (lang || '').toLowerCase();
+  const isCodeLang = /^(x\+\+|xpp|ts|typescript|js|javascript|cs|csharp|c#|sql)$/.test(l);
+  let s = esc(code);
+
+  // comments first (won't match ones inside strings because we haven't wrapped strings yet —
+  // acceptable for a cheap highlighter)
+  s = s.replace(/(\/\/[^\n]*)/g, '<span class="c">$1</span>');
+  s = s.replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="c">$1</span>');
+
+  if (!isCodeLang) return s;
+
+  // strings
+  s = s.replace(/(&quot;[^&]*?&quot;)/g, '<span class="s">$1</span>');
+  s = s.replace(/('[^']*?')/g, '<span class="s">$1</span>');
+
+  // numbers
+  s = s.replace(/\b(\d+\.?\d*)\b/g, '<span class="n">$1</span>');
+
+  // keywords (common union across X++, C#, TS)
+  const kws = ['public','private','protected','internal','static','class','extends','implements','interface','return','new','const','let','var','if','else','for','while','void','null','true','false','this','super','import','export','from','default','throw','try','catch','async','await','function','typeof','in','of','str','int','boolean','real','date'];
+  const kwRe = new RegExp('\\b(' + kws.join('|') + ')\\b', 'g');
+  s = s.replace(kwRe, '<span class="k">$1</span>');
+
+  // PascalCase identifiers as types
+  s = s.replace(/\b([A-Z][A-Za-z0-9_]+)\b/g, '<span class="t">$1</span>');
+
+  return s;
+}
+
+/* ───── live preview ───── */
+function renderPreview() {
+  const title = $('f-title').value || 'Untitled post';
+  const deck  = $('f-deck').value || '';
+  const tag   = $('f-tag').value;
+  const date  = $('f-date').value;
+  const read  = $('f-read').value || estimateRead($('f-body').value);
+  const slug  = $('f-slug').value || slugify(title) || 'new-post';
+  $('pv-filename').textContent = `blog/${slug}.html`;
+
+  const { body, toc } = renderBody($('f-body').value);
+
+  $('preview').innerHTML = `
+    <div class="meta">
+      <span class="tag">${esc(tag)}</span>
+      <span>${esc(date || 'YYYY-MM-DD')}</span>
+      <span>${esc(read)} read</span>
+    </div>
+    <h1 class="title">${esc(title)}</h1>
+    <p class="deck">${inlineMd(deck)}</p>
+    ${toc}
+    ${body}
+  `;
+}
+
+/* ───── generate the full file ───── */
+function buildArticleHtml() {
+  const title = $('f-title').value || 'Untitled post';
+  const deck  = $('f-deck').value || '';
+  const tag   = $('f-tag').value;
+  const date  = $('f-date').value;
+  const read  = $('f-read').value || estimateRead($('f-body').value);
+  const slug  = $('f-slug').value || slugify(title) || 'new-post';
+  const nextT = $('f-next-title').value.trim();
+  const nextH = $('f-next-href').value.trim() || 'index.html';
+  const { body, toc } = renderBody($('f-body').value);
+  const nextBlock = nextT
+    ? `<a href="${esc(nextH)}"><div class="lbl">next →</div><div class="ttl">${esc(nextT)}</div></a>`
+    : `<a href="index.html"><div class="lbl">next →</div><div class="ttl">More posts</div></a>`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${esc(title)} — Dileep Gopalakrishnan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="article.css"/>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="wrap">
+  <div class="nav">
+    <div><span class="prompt">~/</span>dileep.g<span style="color:var(--accent)">_</span></div>
+    <div>
+      <a href="../index.html">index</a>
+      <a href="index.html" class="active">writing</a>
+      <a href="mailto:dileephpg6@outlook.com">contact</a>
+    </div>
+  </div>
+
+  <div class="meta">
+    <span class="tag">${esc(tag)}</span>
+    <span>${esc(date)}</span>
+    <span>${esc(read)} read</span>
+  </div>
+  <h1 class="title">${esc(title)}</h1>
+  <p class="deck">${inlineMd(deck)}</p>
+${toc ? '  ' + toc : ''}
+
+${body.split('\n').map(l => '  ' + l).join('\n')}
+
+  <hr/>
+
+  <div class="author">
+    <div class="avatar">DG</div>
+    <div>
+      <div class="n">Dileep Gopalakrishnan</div>
+      <div class="b">10+ years in Microsoft Dynamics 365 F&amp;O and AX 2012 R3. ISV add-on developer. Open for freelance &amp; consulting — <a href="mailto:dileephpg6@outlook.com">dileephpg6@outlook.com</a></div>
+    </div>
+  </div>
+
+  <div class="prevnext">
+    <a href="index.html"><div class="lbl">← all posts</div><div class="ttl">Back to writing</div></a>
+    ${nextBlock}
+  </div>
+
+  <div class="footer">
+    <span>© ${new Date().getFullYear()} Dileep Gopalakrishnan</span>
+    <span>dileephpg6@outlook.com · /in/dileep-gopalakrishnan-43a44a7a</span>
+  </div>
+</div>
+<script>
+  const bar = document.getElementById('progress');
+  function update() {
+    const h = document.documentElement;
+    const pct = (h.scrollTop) / (h.scrollHeight - h.clientHeight) * 100;
+    bar.style.width = Math.min(100, Math.max(0, pct)) + '%';
+  }
+  document.addEventListener('scroll', update, { passive: true });
+  update();
+<\/script>
+</body>
+</html>
+`;
+}
+
+/* ───── snippets for blog/index.html & app/views.jsx ───── */
+function buildIndexRow() {
+  const title = $('f-title').value || 'Untitled';
+  const deck  = $('f-deck').value || '';
+  const tag   = $('f-tag').value;
+  const date  = $('f-date').value || 'YYYY-MM-DD';
+  const read  = $('f-read').value || estimateRead($('f-body').value);
+  const slug  = $('f-slug').value || slugify(title) || 'new-post';
+  return `<a class="post" href="${slug}.html">
+  <span class="d">${date}</span>
+  <span class="t">${title}<span class="sub">${deck}</span></span>
+  <span class="r"><span class="tagpill">${tag}</span>${read}</span>
+</a>`;
+}
+
+function buildPostsEntry() {
+  const title = $('f-title').value || 'Untitled';
+  const deck  = $('f-deck').value || '';
+  const tag   = $('f-tag').value;
+  const date  = $('f-date').value || 'YYYY-MM-DD';
+  const read  = $('f-read').value || estimateRead($('f-body').value);
+  const slug  = $('f-slug').value || slugify(title) || 'new-post';
+  return `{ d: '${date}', t: '${title.replace(/'/g, "\\'")}',\n  sub: '${deck.replace(/'/g, "\\'")}',\n  tag: '${tag}', read: '${read}', href: 'blog/${slug}.html' },`;
+}
+
+/* ───── output modal ───── */
+function showOutput(filename, code) {
+  $('out-filename').textContent = filename;
+  $('out-code').textContent = code;
+  $('output').classList.add('open');
+  $('btn-download').onclick = () => {
+    const blob = new Blob([code], { type: 'text/html' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename.split('/').pop();
+    a.click();
+  };
+  $('btn-copy-html').onclick = () => { navigator.clipboard.writeText(code); $('btn-copy-html').textContent = '✓ copied'; setTimeout(()=>$('btn-copy-html').textContent='copy', 1200); };
+}
+$('btn-close').onclick = () => $('output').classList.remove('open');
+$('output').addEventListener('click', (e) => { if (e.target.id === 'output') $('output').classList.remove('open'); });
+
+/* ───── wire up ───── */
+const ids = ['f-slug','f-title','f-tag','f-date','f-read','f-deck','f-body','f-next-title','f-next-href'];
+ids.forEach(id => $(id).addEventListener('input', () => { saveDraft(); renderPreview(); }));
+
+$('f-title').addEventListener('input', () => {
+  if (!$('f-slug').dataset.touched) $('f-slug').value = slugify($('f-title').value);
+});
+$('f-slug').addEventListener('input', () => { $('f-slug').dataset.touched = '1'; });
+
+$('btn-generate').onclick = () => {
+  const slug = $('f-slug').value || slugify($('f-title').value) || 'new-post';
+  showOutput(`blog/${slug}.html`, buildArticleHtml());
+};
+$('btn-copy-md').onclick = () => {
+  navigator.clipboard.writeText(buildIndexRow());
+  $('btn-copy-md').textContent = '✓ copied';
+  setTimeout(() => $('btn-copy-md').textContent = 'copy index.html row', 1400);
+};
+$('btn-copy-js').onclick = () => {
+  navigator.clipboard.writeText(buildPostsEntry());
+  $('btn-copy-js').textContent = '✓ copied';
+  setTimeout(() => $('btn-copy-js').textContent = 'copy POSTS entry', 1400);
+};
+$('btn-clear').onclick = () => {
+  ids.forEach(id => $(id).value = '');
+  $('f-slug').dataset.touched = '';
+  $('f-tag').value = 'D365 F&O';
+  localStorage.removeItem('dileep-new-post-draft');
+  renderPreview();
+};
+
+/* ───── sample content ───── */
+const SAMPLE = {
+  'f-slug': 'handling-virtual-companies',
+  'f-title': 'Handling virtual companies without losing your weekend',
+  'f-tag': 'D365 F&O',
+  'f-date': new Date().toISOString().slice(0,10),
+  'f-read': '',
+  'f-deck': 'Virtual companies are the kind of feature that works beautifully — until the day it doesn\'t. Here\'s how I keep them boring.',
+  'f-body': `## Why virtual companies still matter
+
+In D365 F&O, **virtual companies** let a set of tables be shared across multiple legal entities. The feature is older than some of your colleagues and it still has the same footguns.
+
+:::note
+Virtual companies only apply to tables flagged \`SaveDataPerCompany = No\` in the right way. Not every table is a candidate.
+:::
+
+## The three-step sanity check
+
+Before enabling a virtual company in a client environment, I run this every time.
+
+1. Identify the tables and their \`SaveDataPerCompany\` setting
+2. Confirm no *custom* code reads them with a hard-coded company
+3. Dry-run the data move in a copy of production
+
+## The code pattern I rely on
+
+\`\`\`X++
+public void validateBeforeEnable()
+{
+    CompanyInfo company;
+    select firstonly company where company.DataArea == curExt();
+    if (!company)
+    {
+        throw error("No company context — abort.");
+    }
+}
+\`\`\`
+
+> If virtual companies are causing pain, the answer is almost never "more virtual companies." It's usually a data-entity seam that was never drawn.
+
+---
+
+### Wrap-up
+
+Keep the table list short, document it in the repo, and review it every upgrade. That's it.`,
+  'f-next-title': '',
+  'f-next-href': 'index.html',
+};
+$('btn-load-sample').onclick = () => {
+  Object.entries(SAMPLE).forEach(([k, v]) => { $(k).value = v; });
+  $('f-slug').dataset.touched = '1';
+  saveDraft(); renderPreview();
+};
+
+/* ───── draft persistence ───── */
+function saveDraft() {
+  const data = {}; ids.forEach(id => data[id] = $(id).value);
+  try { localStorage.setItem('dileep-new-post-draft', JSON.stringify(data)); } catch {}
+}
+function loadDraft() {
+  try {
+    const d = JSON.parse(localStorage.getItem('dileep-new-post-draft') || 'null');
+    if (d) { Object.entries(d).forEach(([k, v]) => { if ($(k) && v) $(k).value = v; }); if (d['f-slug']) $('f-slug').dataset.touched = '1'; }
+  } catch {}
+}
+
+/* init */
+loadDraft();
+if (!$('f-date').value) $('f-date').value = new Date().toISOString().slice(0,10);
+if (!$('f-tag').value) $('f-tag').value = 'D365 F&O';
+renderPreview();
+</script>
+</body>
+</html>
